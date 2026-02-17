@@ -20,7 +20,7 @@ st.markdown('<div class="main-title">🏛 Enterprise Wireless Full-Stack Investm
 
 st.sidebar.header("🏢 Strategic Parameters")
 
-sqft = st.sidebar.number_input("Facility Size (sqft)", min_value=1000.0, value=500000.0)
+sqft = st.sidebar.number_input("Facility Size (sqft)", min_value=100.0, value=500000.0)
 years = st.sidebar.slider("Investment Horizon (Years)", 3, 10, 5)
 
 coverage = st.sidebar.selectbox(
