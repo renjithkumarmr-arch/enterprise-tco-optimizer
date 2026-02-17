@@ -41,7 +41,7 @@ st.sidebar.header("📶 Wi-Fi Stack")
 
 wifi_ap_cost = st.sidebar.number_input("Access Point Cost ($)", 500, 5000, 1200)
 wifi_switch_cost = st.sidebar.number_input("Access Switch Cost ($)", 2000, 20000, 8000)
-wifi_controller_cost = st.sidebar.number_input("Controller/Core Cost ($)", 10000, 200000, 50000)
+wifi_controller_cost = st.sidebar.number_input("Controller/Core Cost ($)", 1000, 200000, 50000)
 wifi_install_percent = st.sidebar.slider("Installation (%)", 5, 30, 15) / 100
 wifi_maint = st.sidebar.slider("Maintenance (%)", 5, 30, 18) / 100
 
