@@ -2,20 +2,23 @@ import streamlit as st
 import plotly.graph_objects as go
 import math
 
+# ============================================================
+# PAGE CONFIG & STYLING
+# ============================================================
+
 st.set_page_config(layout="wide")
 
 st.markdown("""
 <style>
 .main-title { font-size:34px; font-weight:700; }
 .section-title { font-size:22px; font-weight:600; margin-top:30px; }
-.small-note { font-size:14px; color:gray; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">🏛 Enterprise Wireless Investment Decision Engine</div>', unsafe_allow_html=True)
 
 # ============================================================
-# VENUE SIZE BASE MODELING
+# VENUE BASE PROFILES
 # ============================================================
 
 VENUE_PROFILES = {
@@ -43,7 +46,7 @@ VENUE_PROFILES = {
 }
 
 # ============================================================
-# SIDEBAR – DRILL DOWN MODEL
+# SIDEBAR – DRILL DOWN
 # ============================================================
 
 st.sidebar.header("🏢 Venue Classification")
@@ -55,21 +58,28 @@ venue_type = st.sidebar.selectbox(
 
 profile = VENUE_PROFILES[venue_type]
 
-st.sidebar.markdown(f"**Base Model Applied:** {venue_type}")
-
+st.sidebar.markdown(f"**Base Profile Applied:** {venue_type}")
 st.sidebar.markdown("---")
+
 st.sidebar.header("Strategic Parameters")
 
 sqft = st.sidebar.number_input("Facility Size (sqft)", 1000, 10000000, profile["sqft"], 10000)
 years = st.sidebar.slider("Investment Horizon (Years)", 3, 10, 5)
-coverage = st.sidebar.selectbox("Coverage Model",
-                                 ["Indoor Only", "Outdoor Only", "Indoor + Outdoor"],
-                                 index=["Indoor Only","Outdoor Only","Indoor + Outdoor"].index(profile["coverage"]))
+
+coverage = st.sidebar.selectbox(
+    "Coverage Model",
+    ["Indoor Only", "Outdoor Only", "Indoor + Outdoor"],
+    index=["Indoor Only","Outdoor Only","Indoor + Outdoor"].index(profile["coverage"])
+)
+
 growth = st.sidebar.slider("Annual Device Growth (%)", 0, 30, profile["growth"])
 latency = st.sidebar.slider("Latency Requirement (ms)", 1, 50, profile["latency"])
-sla = st.sidebar.selectbox("Availability Target",
-                           ["99.9%","99.99%","99.999%"],
-                           index=["99.9%","99.99%","99.999%"].index(profile["sla"]))
+
+sla = st.sidebar.selectbox(
+    "Availability Target",
+    ["99.9%","99.99%","99.999%"],
+    index=["99.9%","99.99%","99.999%"].index(profile["sla"])
+)
 
 st.sidebar.markdown("---")
 st.sidebar.header("💰 Financial Assumptions")
@@ -107,6 +117,7 @@ wifi_ap_count = math.ceil((sqft / 2500) * coverage_multiplier(coverage))
 wifi_capex = wifi_ap_count * wifi_ap_cost
 wifi_opex = wifi_capex * wifi_maint * years
 wifi_total = (wifi_capex + wifi_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
+
 if latency < 10:
     wifi_total *= 1.10
 
@@ -120,7 +131,7 @@ hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
 hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
 # ============================================================
-# EXECUTIVE SUMMARY
+# 1️⃣ EXECUTIVE SUMMARY
 # ============================================================
 
 st.markdown('<div class="section-title">1️⃣ Executive Financial Overview</div>', unsafe_allow_html=True)
@@ -130,22 +141,51 @@ col1.metric("Wi-Fi 5Y TCO", f"${wifi_total:,.0f}")
 col2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 col3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
-# Relative Delta
-cheapest = min(wifi_total, p5g_total, hyb_total)
+# ============================================================
+# 2️⃣ RELATIVE COST TABLE
+# ============================================================
 
 st.markdown('<div class="section-title">2️⃣ Relative Cost Positioning</div>', unsafe_allow_html=True)
 
-if cheapest == wifi_total:
-    delta = (p5g_total - wifi_total)/wifi_total*100
-    st.success(f"Wi-Fi delivers approximately {delta:.1f}% lower total investment vs Private 5G.")
-elif cheapest == p5g_total:
-    delta = (wifi_total - p5g_total)/p5g_total*100
-    st.success(f"Private 5G delivers approximately {delta:.1f}% lower total investment vs Wi-Fi.")
-else:
-    st.success("Hybrid provides balanced cost structure across CAPEX and OPEX.")
+annual_wifi = wifi_total / years
+annual_p5g = p5g_total / years
+annual_hyb = hyb_total / years
+
+wifi_per_sqft = wifi_total / sqft
+p5g_per_sqft = p5g_total / sqft
+hyb_per_sqft = hyb_total / sqft
+
+def percent_diff(base, compare):
+    return ((compare - base) / base) * 100
+
+comparison_data = [
+    {
+        "Architecture": "Wi-Fi",
+        "5Y TCO ($)": f"{wifi_total:,.0f}",
+        "Annual Run Rate ($)": f"{annual_wifi:,.0f}",
+        "Cost per Sqft ($)": f"{wifi_per_sqft:.2f}",
+        "% vs Wi-Fi": "Baseline"
+    },
+    {
+        "Architecture": "Private 5G",
+        "5Y TCO ($)": f"{p5g_total:,.0f}",
+        "Annual Run Rate ($)": f"{annual_p5g:,.0f}",
+        "Cost per Sqft ($)": f"{p5g_per_sqft:.2f}",
+        "% vs Wi-Fi": f"{percent_diff(wifi_total, p5g_total):.1f}%"
+    },
+    {
+        "Architecture": "Hybrid",
+        "5Y TCO ($)": f"{hyb_total:,.0f}",
+        "Annual Run Rate ($)": f"{annual_hyb:,.0f}",
+        "Cost per Sqft ($)": f"{hyb_per_sqft:.2f}",
+        "% vs Wi-Fi": f"{percent_diff(wifi_total, hyb_total):.1f}%"
+    }
+]
+
+st.table(comparison_data)
 
 # ============================================================
-# CAPEX & OPEX SEPARATE
+# 3️⃣ CAPITAL & OPERATING SEPARATION
 # ============================================================
 
 st.markdown('<div class="section-title">3️⃣ Capital Investment (CAPEX)</div>', unsafe_allow_html=True)
@@ -165,16 +205,16 @@ fig_opex.update_layout(template="plotly_white")
 st.plotly_chart(fig_opex, use_container_width=True)
 
 # ============================================================
-# STRATEGIC TRIGGERS
+# 4️⃣ STRATEGIC RECOMMENDATION
 # ============================================================
 
-st.markdown('<div class="section-title">5️⃣ Strategic Impact Indicators</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">5️⃣ Executive Recommendation</div>', unsafe_allow_html=True)
 
-if latency < 10:
-    st.info("Low latency requirement strengthens Private 5G strategic case.")
+cheapest = min(wifi_total, p5g_total, hyb_total)
 
-if growth > 15:
-    st.info("High growth environment favors scalable architecture.")
-
-if sla == "99.999%":
-    st.warning("Ultra-high availability requirement increases resilience cost.")
+if cheapest == wifi_total:
+    st.success("Recommendation: Wi-Fi provides the lowest total financial exposure under current assumptions.")
+elif cheapest == p5g_total:
+    st.success("Recommendation: Private 5G offers stronger long-term scalability and cost efficiency.")
+else:
+    st.success("Recommendation: Hybrid architecture balances investment structure and operational resilience.")
