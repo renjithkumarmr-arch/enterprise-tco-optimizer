@@ -20,7 +20,7 @@ st.markdown('<div class="main-title">🏛 Enterprise Wireless Full-Stack Investm
 
 st.sidebar.header("🏢 Strategic Parameters")
 
-sqft = st.sidebar.number_input("Facility Size (sqft)", min_value=100.0, value=500000.0)
+sqft = st.sidebar.number_input("Facility Size (sqft)", min_value=1000.0, value=500000.0)
 years = st.sidebar.slider("Investment Horizon (Years)", 3, 10, 5)
 
 coverage = st.sidebar.selectbox(
@@ -45,7 +45,7 @@ wifi_controller_cost = st.sidebar.number_input("Controller/Core Cost ($)", min_v
 
 wifi_install_percent = st.sidebar.slider("Installation (%)", 0, 30, 15) / 100
 wifi_maint = st.sidebar.slider("Maintenance (%)", 0, 30, 18) / 100
-wifi_discount = st.sidebar.slider("Wi-Fi Discount (%)", 0, 50, 100) / 100
+wifi_discount = st.sidebar.slider("Wi-Fi Discount (%)", 0, 50, 0) / 100
 
 # ============================================================
 # PRIVATE 5G STACK
@@ -61,7 +61,7 @@ p5g_backhaul_cost = st.sidebar.number_input("Backhaul Cost ($)", min_value=0.0, 
 
 p5g_install_percent = st.sidebar.slider("Installation (%)", 0, 30, 12) / 100
 p5g_maint = st.sidebar.slider("Maintenance (%)", 0, 30, 15) / 100
-p5g_discount = st.sidebar.slider("Private 5G Discount (%)", 0, 50, 100) / 100
+p5g_discount = st.sidebar.slider("Private 5G Discount (%)", 0, 50, 0) / 100
 
 # ============================================================
 # MULTIPLIERS
@@ -89,7 +89,6 @@ wifi_core_total = wifi_controller_cost
 
 wifi_capex_raw = wifi_access_cost + wifi_switch_total + wifi_core_total
 wifi_install_cost = wifi_capex_raw * wifi_install_percent
-
 wifi_capex_before_discount = wifi_capex_raw + wifi_install_cost
 wifi_capex = wifi_capex_before_discount * (1 - wifi_discount)
 
@@ -112,20 +111,19 @@ p5g_backhaul_total = p5g_backhaul_cost
 
 p5g_capex_raw = p5g_radio_cost + p5g_core_total + p5g_edge_total + p5g_backhaul_total
 p5g_install_cost = p5g_capex_raw * p5g_install_percent
-
 p5g_capex_before_discount = p5g_capex_raw + p5g_install_cost
 p5g_capex = p5g_capex_before_discount * (1 - p5g_discount)
 
 p5g_opex = p5g_capex * p5g_maint * years
 p5g_total = (p5g_capex + p5g_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
-## ============================================================
-# HYBRID
+# ============================================================
+# HYBRID (Summary Only)
 # ============================================================
 
-#hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
-#hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
-#hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
+hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
+hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
+hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
 # ============================================================
 # EXECUTIVE OVERVIEW
@@ -139,7 +137,7 @@ c2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 c3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# CAPEX TABLE
+# CAPEX COMPOSITION TABLE
 # ============================================================
 
 st.markdown('<div class="section-title">2️⃣ CAPEX Composition Breakdown</div>', unsafe_allow_html=True)
@@ -186,35 +184,46 @@ capex_df = pd.concat([capex_df, totals], ignore_index=True)
 st.dataframe(capex_df, use_container_width=True)
 
 # ============================================================
-# CAPEX COMPARISON GRAPH
+# CAPEX COMPARISON GRAPH (Wi-Fi vs 5G)
 # ============================================================
 
 st.markdown('<div class="section-title">3️⃣ Total CAPEX Comparison</div>', unsafe_allow_html=True)
 
 fig_capex = go.Figure()
+
 fig_capex.add_trace(go.Bar(name="Wi-Fi", x=["CAPEX"], y=[wifi_capex]))
 fig_capex.add_trace(go.Bar(name="Private 5G", x=["CAPEX"], y=[p5g_capex]))
-fig_capex.add_trace(go.Bar(name="Hybrid", x=["CAPEX"], y=[hyb_capex]))
 
 fig_capex.update_layout(barmode="group", template="plotly_white")
 st.plotly_chart(fig_capex, use_container_width=True)
 
 # ============================================================
-# INVESTMENT TREND
+# INVESTMENT TREND (Wi-Fi vs 5G)
 # ============================================================
 
 st.markdown('<div class="section-title">4️⃣ Investment Trend (Cumulative)</div>', unsafe_allow_html=True)
 
 years_list = list(range(1, years+1))
 
-wifi_trend = [wifi_capex + wifi_capex*wifi_maint*y for y in years_list]
-p5g_trend = [p5g_capex + p5g_capex*p5g_maint*y for y in years_list]
-hyb_trend = [hyb_capex + hyb_capex*wifi_maint*y for y in years_list]
+wifi_trend = [wifi_capex + wifi_capex * wifi_maint * y for y in years_list]
+p5g_trend = [p5g_capex + p5g_capex * p5g_maint * y for y in years_list]
 
 fig_trend = go.Figure()
-fig_trend.add_trace(go.Scatter(x=years_list, y=wifi_trend, mode='lines+markers', name='Wi-Fi'))
-fig_trend.add_trace(go.Scatter(x=years_list, y=p5g_trend, mode='lines+markers', name='Private 5G'))
-fig_trend.add_trace(go.Scatter(x=years_list, y=hyb_trend, mode='lines+markers', name='Hybrid'))
+
+fig_trend.add_trace(go.Scatter(
+    x=years_list,
+    y=wifi_trend,
+    mode='lines+markers',
+    name='Wi-Fi'
+))
+
+fig_trend.add_trace(go.Scatter(
+    x=years_list,
+    y=p5g_trend,
+    mode='lines+markers',
+    name='Private 5G'
+))
 
 fig_trend.update_layout(template="plotly_white")
+
 st.plotly_chart(fig_trend, use_container_width=True)
