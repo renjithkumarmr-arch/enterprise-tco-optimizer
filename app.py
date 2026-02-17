@@ -33,31 +33,31 @@ latency = st.sidebar.slider("Latency Requirement (ms)", 1, 50, 15)
 sla = st.sidebar.selectbox("Availability Target", ["99.9%","99.99%","99.999%"])
 
 # ============================================================
-# SIDEBAR – Wi-Fi STACK
+# Wi-Fi STACK
 # ============================================================
 
 st.sidebar.markdown("---")
-st.sidebar.header("📶 Wi-Fi Infrastructure Stack")
+st.sidebar.header("📶 Wi-Fi Stack")
 
 wifi_ap_cost = st.sidebar.number_input("Access Point Cost ($)", 500, 5000, 1200, 100)
 wifi_switch_cost = st.sidebar.number_input("Access Switch Cost ($)", 2000, 20000, 8000, 500)
-wifi_controller_cost = st.sidebar.number_input("Controller / Core Cost ($)", 10000, 200000, 50000, 5000)
-wifi_install_percent = st.sidebar.slider("Installation & Cabling (%)", 5, 30, 15) / 100
-wifi_maint = st.sidebar.slider("Annual Maintenance (%)", 5, 30, 18) / 100
+wifi_controller_cost = st.sidebar.number_input("Controller/Core Cost ($)", 10000, 200000, 50000, 5000)
+wifi_install_percent = st.sidebar.slider("Installation (%)", 5, 30, 15) / 100
+wifi_maint = st.sidebar.slider("Maintenance (%)", 5, 30, 18) / 100
 
 # ============================================================
-# SIDEBAR – PRIVATE 5G STACK
+# PRIVATE 5G STACK
 # ============================================================
 
 st.sidebar.markdown("---")
-st.sidebar.header("📡 Private 5G Infrastructure Stack")
+st.sidebar.header("📡 Private 5G Stack")
 
 p5g_cell_cost = st.sidebar.number_input("Small Cell Cost ($)", 2000, 10000, 5000, 500)
 p5g_core_cost = st.sidebar.number_input("5G Core Cost ($)", 20000, 200000, 80000, 5000)
 p5g_edge_cost = st.sidebar.number_input("Edge Server Cost ($)", 10000, 150000, 60000, 5000)
-p5g_backhaul_cost = st.sidebar.number_input("Backhaul / Transport Cost ($)", 10000, 200000, 40000, 5000)
+p5g_backhaul_cost = st.sidebar.number_input("Backhaul Cost ($)", 10000, 200000, 40000, 5000)
 p5g_install_percent = st.sidebar.slider("Installation (%)", 5, 30, 12) / 100
-p5g_maint = st.sidebar.slider("Annual Maintenance (%)", 5, 30, 15) / 100
+p5g_maint = st.sidebar.slider("Maintenance (%)", 5, 30, 15) / 100
 
 # ============================================================
 # MULTIPLIERS
@@ -86,7 +86,6 @@ wifi_capex = (
 )
 
 wifi_capex *= (1 + wifi_install_percent)
-
 wifi_opex = wifi_capex * wifi_maint * years
 wifi_total = (wifi_capex + wifi_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
@@ -107,12 +106,11 @@ p5g_capex = (
 )
 
 p5g_capex *= (1 + p5g_install_percent)
-
 p5g_opex = p5g_capex * p5g_maint * years
 p5g_total = (p5g_capex + p5g_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
 # ============================================================
-# HYBRID (60% Infra Blending)
+# HYBRID
 # ============================================================
 
 hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
@@ -131,35 +129,44 @@ c2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 c3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# RELATIVE POSITIONING (Wi-Fi BASELINE)
+# CAPEX BAR
 # ============================================================
 
-st.markdown('<div class="section-title">2️⃣ Relative Cost Positioning (Wi-Fi Baseline)</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">2️⃣ Capital Investment (CAPEX)</div>', unsafe_allow_html=True)
 
-def percent_change(base, compare):
-    return ((compare - base) / base) * 100
+fig_capex = go.Figure()
+fig_capex.add_trace(go.Bar(x=["Wi-Fi","Private 5G","Hybrid"],
+                           y=[wifi_capex,p5g_capex,hyb_capex]))
+fig_capex.update_layout(template="plotly_white")
+st.plotly_chart(fig_capex, use_container_width=True)
 
-p5g_vs_wifi = percent_change(wifi_total, p5g_total)
-hyb_vs_wifi = percent_change(wifi_total, hyb_total)
+# ============================================================
+# OPEX BAR
+# ============================================================
 
-data = pd.DataFrame({
-    "Architecture": ["Wi-Fi (Baseline)", "Private 5G", "Hybrid"],
-    "5Y TCO ($)": [wifi_total, p5g_total, hyb_total],
-    "% vs Wi-Fi": ["Baseline", f"{p5g_vs_wifi:+.1f}%", f"{hyb_vs_wifi:+.1f}%"]
-})
+st.markdown('<div class="section-title">3️⃣ Operational Cost Exposure (OPEX)</div>', unsafe_allow_html=True)
 
-data["5Y TCO ($)"] = data["5Y TCO ($)"].map(lambda x: f"${x:,.0f}")
+fig_opex = go.Figure()
+fig_opex.add_trace(go.Bar(x=["Wi-Fi","Private 5G","Hybrid"],
+                          y=[wifi_opex,p5g_opex,hyb_opex]))
+fig_opex.update_layout(template="plotly_white")
+st.plotly_chart(fig_opex, use_container_width=True)
 
-st.dataframe(data, use_container_width=True, hide_index=True)
+# ============================================================
+# 5-YEAR TREND
+# ============================================================
 
-st.markdown("---")
+st.markdown('<div class="section-title">4️⃣ Investment Trend (Cumulative)</div>', unsafe_allow_html=True)
 
-if p5g_vs_wifi < 0:
-    st.success(f"Private 5G reduces investment by {abs(p5g_vs_wifi):.1f}% vs Wi-Fi.")
-else:
-    st.warning(f"Private 5G increases investment by {abs(p5g_vs_wifi):.1f}% vs Wi-Fi.")
+years_list = list(range(1, years+1))
 
-if hyb_vs_wifi < 0:
-    st.success(f"Hybrid reduces investment by {abs(hyb_vs_wifi):.1f}% vs Wi-Fi.")
-else:
-    st.warning(f"Hybrid increases investment by {abs(hyb_vs_wifi):.1f}% vs Wi-Fi.")
+wifi_trend = [wifi_capex + wifi_capex*wifi_maint*y for y in years_list]
+p5g_trend = [p5g_capex + p5g_capex*p5g_maint*y for y in years_list]
+hyb_trend = [hyb_capex + hyb_capex*wifi_maint*y for y in years_list]
+
+fig_trend = go.Figure()
+fig_trend.add_trace(go.Scatter(x=years_list, y=wifi_trend, mode='lines+markers', name='Wi-Fi'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=p5g_trend, mode='lines+markers', name='Private 5G'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=hyb_trend, mode='lines+markers', name='Hybrid'))
+fig_trend.update_layout(template="plotly_white")
+st.plotly_chart(fig_trend, use_container_width=True)
