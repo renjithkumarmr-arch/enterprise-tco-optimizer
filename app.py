@@ -29,11 +29,10 @@ VENUE_PROFILES = {
 }
 
 # ============================================================
-# SIDEBAR
+# SIDEBAR INPUTS
 # ============================================================
 
 st.sidebar.header("🏢 Venue Classification")
-
 venue_type = st.sidebar.selectbox("Select Venue Size", list(VENUE_PROFILES.keys()))
 profile = VENUE_PROFILES[venue_type]
 
@@ -41,7 +40,6 @@ st.sidebar.markdown(f"**Base Profile Applied:** {venue_type}")
 st.sidebar.markdown("---")
 
 st.sidebar.header("Strategic Parameters")
-
 sqft = st.sidebar.number_input("Facility Size (sqft)", 1000, 10000000, profile["sqft"], 10000)
 years = st.sidebar.slider("Investment Horizon (Years)", 3, 10, 5)
 
@@ -59,10 +57,6 @@ sla = st.sidebar.selectbox(
     ["99.9%","99.99%","99.999%"],
     index=["99.9%","99.99%","99.999%"].index(profile["sla"])
 )
-
-# ============================================================
-# EDITABLE REFERENCE PRICING
-# ============================================================
 
 st.sidebar.markdown("---")
 st.sidebar.header("📌 Reference Pricing (Editable)")
@@ -100,7 +94,6 @@ wifi_ap_count = math.ceil((sqft/2500) * coverage_multiplier(coverage))
 wifi_capex = wifi_ap_count * wifi_ap_cost
 wifi_opex = wifi_capex * wifi_maint * years
 wifi_total = (wifi_capex + wifi_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
-
 if latency < 10:
     wifi_total *= 1.10
 
@@ -125,7 +118,7 @@ col2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 col3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# RELATIVE COST POSITIONING (Wi-Fi BASELINE)
+# RELATIVE POSITIONING (Wi-Fi BASELINE)
 # ============================================================
 
 st.markdown('<div class="section-title">2️⃣ Relative Cost Positioning (Wi-Fi Baseline)</div>', unsafe_allow_html=True)
@@ -168,8 +161,7 @@ def highlight(row):
     else:
         return ["background-color:#f8d7da"]*len(row)
 
-styled = data.style.apply(highlight, axis=1)
-st.dataframe(styled, use_container_width=True, hide_index=True)
+st.dataframe(data.style.apply(highlight, axis=1), use_container_width=True, hide_index=True)
 
 st.markdown("---")
 
@@ -179,12 +171,12 @@ else:
     st.warning(f"Private 5G increases total investment by {abs(p5g_vs_wifi):.1f}% compared to Wi-Fi.")
 
 if hyb_vs_wifi < 0:
-    st.success(f"Hybrid architecture reduces total investment by {abs(hyb_vs_wifi):.1f}% compared to Wi-Fi.")
+    st.success(f"Hybrid reduces total investment by {abs(hyb_vs_wifi):.1f}% compared to Wi-Fi.")
 else:
-    st.warning(f"Hybrid architecture increases total investment by {abs(hyb_vs_wifi):.1f}% compared to Wi-Fi.")
+    st.warning(f"Hybrid increases total investment by {abs(hyb_vs_wifi):.1f}% compared to Wi-Fi.")
 
 # ============================================================
-# CAPEX & OPEX
+# CAPEX / OPEX
 # ============================================================
 
 st.markdown('<div class="section-title">3️⃣ Capital Investment (CAPEX)</div>', unsafe_allow_html=True)
@@ -202,3 +194,35 @@ fig_opex.add_trace(go.Bar(x=["Wi-Fi","Private 5G","Hybrid"],
                           y=[wifi_opex,p5g_opex,hyb_opex]))
 fig_opex.update_layout(template="plotly_white")
 st.plotly_chart(fig_opex, use_container_width=True)
+
+# ============================================================
+# 5-YEAR TREND
+# ============================================================
+
+st.markdown('<div class="section-title">5️⃣ Investment Trend (Cumulative)</div>', unsafe_allow_html=True)
+
+years_list = list(range(1, years+1))
+
+wifi_trend = [wifi_capex + wifi_capex*wifi_maint*y for y in years_list]
+p5g_trend = [p5g_capex + p5g_capex*p5g_maint*y for y in years_list]
+hyb_trend = [hyb_capex + hyb_capex*wifi_maint*y for y in years_list]
+
+fig_trend = go.Figure()
+fig_trend.add_trace(go.Scatter(x=years_list, y=wifi_trend, mode='lines+markers', name='Wi-Fi'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=p5g_trend, mode='lines+markers', name='Private 5G'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=hyb_trend, mode='lines+markers', name='Hybrid'))
+fig_trend.update_layout(template="plotly_white")
+st.plotly_chart(fig_trend, use_container_width=True)
+
+# ============================================================
+# NORMALIZED COST
+# ============================================================
+
+st.markdown('<div class="section-title">6️⃣ Normalized Cost Indicators</div>', unsafe_allow_html=True)
+
+device_estimate = sqft * 0.01
+
+c1, c2, c3 = st.columns(3)
+c1.metric("Wi-Fi Cost per Device", f"${wifi_total/device_estimate:,.0f}")
+c2.metric("5G Cost per Device", f"${p5g_total/device_estimate:,.0f}")
+c3.metric("Hybrid Cost per Device", f"${hyb_total/device_estimate:,.0f}")
