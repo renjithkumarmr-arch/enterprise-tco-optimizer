@@ -9,6 +9,7 @@ st.markdown("""
 <style>
 .main-title { font-size:34px; font-weight:700; }
 .section-title { font-size:22px; font-weight:600; margin-top:30px; }
+.highlight { font-size:20px; font-weight:600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,29 +119,40 @@ p5g_opex = p5g_capex * p5g_maint * years
 p5g_total = (p5g_capex + p5g_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
 # ============================================================
-# HYBRID (Summary Only)
-# ============================================================
-
-hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
-hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
-hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
-
-# ============================================================
 # EXECUTIVE OVERVIEW
 # ============================================================
 
 st.markdown('<div class="section-title">1️⃣ Executive Financial Overview</div>', unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
+c1, c2 = st.columns(2)
 c1.metric("Wi-Fi 5Y TCO", f"${wifi_total:,.0f}")
 c2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
-c3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# CAPEX COMPOSITION TABLE
+# CAPEX DIFFERENCE SUMMARY
 # ============================================================
 
-st.markdown('<div class="section-title">2️⃣ CAPEX Composition Breakdown</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">2️⃣ CAPEX Comparison Insight</div>', unsafe_allow_html=True)
+
+capex_difference = p5g_capex - wifi_capex
+
+if wifi_capex > 0:
+    percent_difference = (capex_difference / wifi_capex) * 100
+else:
+    percent_difference = 0
+
+if percent_difference > 0:
+    st.markdown(f"<div class='highlight'>Private 5G is {abs(percent_difference):.2f}% higher than Wi-Fi CAPEX.</div>", unsafe_allow_html=True)
+elif percent_difference < 0:
+    st.markdown(f"<div class='highlight'>Private 5G is {abs(percent_difference):.2f}% lower than Wi-Fi CAPEX.</div>", unsafe_allow_html=True)
+else:
+    st.markdown("<div class='highlight'>Wi-Fi and Private 5G CAPEX are equal.</div>", unsafe_allow_html=True)
+
+# ============================================================
+# CAPEX TABLE
+# ============================================================
+
+st.markdown('<div class="section-title">3️⃣ CAPEX Composition Breakdown</div>', unsafe_allow_html=True)
 
 capex_data = {
     "Component": [
@@ -184,46 +196,14 @@ capex_df = pd.concat([capex_df, totals], ignore_index=True)
 st.dataframe(capex_df, use_container_width=True)
 
 # ============================================================
-# CAPEX COMPARISON GRAPH (Wi-Fi vs 5G)
+# CAPEX GRAPH
 # ============================================================
 
-st.markdown('<div class="section-title">3️⃣ Total CAPEX Comparison</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">4️⃣ Total CAPEX Comparison</div>', unsafe_allow_html=True)
 
 fig_capex = go.Figure()
-
 fig_capex.add_trace(go.Bar(name="Wi-Fi", x=["CAPEX"], y=[wifi_capex]))
 fig_capex.add_trace(go.Bar(name="Private 5G", x=["CAPEX"], y=[p5g_capex]))
 
 fig_capex.update_layout(barmode="group", template="plotly_white")
 st.plotly_chart(fig_capex, use_container_width=True)
-
-# ============================================================
-# INVESTMENT TREND (Wi-Fi vs 5G)
-# ============================================================
-
-st.markdown('<div class="section-title">4️⃣ Investment Trend (Cumulative)</div>', unsafe_allow_html=True)
-
-years_list = list(range(1, years+1))
-
-wifi_trend = [wifi_capex + wifi_capex * wifi_maint * y for y in years_list]
-p5g_trend = [p5g_capex + p5g_capex * p5g_maint * y for y in years_list]
-
-fig_trend = go.Figure()
-
-fig_trend.add_trace(go.Scatter(
-    x=years_list,
-    y=wifi_trend,
-    mode='lines+markers',
-    name='Wi-Fi'
-))
-
-fig_trend.add_trace(go.Scatter(
-    x=years_list,
-    y=p5g_trend,
-    mode='lines+markers',
-    name='Private 5G'
-))
-
-fig_trend.update_layout(template="plotly_white")
-
-st.plotly_chart(fig_trend, use_container_width=True)
