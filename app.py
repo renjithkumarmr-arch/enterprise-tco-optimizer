@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
 import math
 
 st.set_page_config(layout="wide")
@@ -130,26 +131,51 @@ c2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 c3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# STACKED CAPEX BREAKDOWN
+# CAPEX COMPOSITION TABLE
 # ============================================================
 
 st.markdown('<div class="section-title">2️⃣ CAPEX Composition Breakdown</div>', unsafe_allow_html=True)
 
-fig_stack = go.Figure()
+capex_data = {
+    "Component": [
+        "Wi-Fi Access Points",
+        "Wi-Fi Switches",
+        "Wi-Fi Controller/Core",
+        "Wi-Fi Installation",
+        "Private 5G Small Cells",
+        "Private 5G Core",
+        "Private 5G Edge Server",
+        "Private 5G Backhaul",
+        "Private 5G Installation"
+    ],
+    "Wi-Fi ($)": [
+        wifi_access_cost,
+        wifi_switch_total,
+        wifi_core_total,
+        wifi_install_cost,
+        0, 0, 0, 0, 0
+    ],
+    "Private 5G ($)": [
+        0, 0, 0, 0,
+        p5g_radio_cost,
+        p5g_core_total,
+        p5g_edge_total,
+        p5g_backhaul_total,
+        p5g_install_cost
+    ]
+}
 
-fig_stack.add_trace(go.Bar(name="Wi-Fi Access", x=["Wi-Fi"], y=[wifi_access_cost]))
-fig_stack.add_trace(go.Bar(name="Wi-Fi Switch", x=["Wi-Fi"], y=[wifi_switch_total]))
-fig_stack.add_trace(go.Bar(name="Wi-Fi Core", x=["Wi-Fi"], y=[wifi_core_total]))
-fig_stack.add_trace(go.Bar(name="Wi-Fi Install", x=["Wi-Fi"], y=[wifi_install_cost]))
+capex_df = pd.DataFrame(capex_data)
 
-fig_stack.add_trace(go.Bar(name="5G Radio", x=["Private 5G"], y=[p5g_radio_cost]))
-fig_stack.add_trace(go.Bar(name="5G Core", x=["Private 5G"], y=[p5g_core_total]))
-fig_stack.add_trace(go.Bar(name="5G Edge", x=["Private 5G"], y=[p5g_edge_total]))
-fig_stack.add_trace(go.Bar(name="5G Backhaul", x=["Private 5G"], y=[p5g_backhaul_total]))
-fig_stack.add_trace(go.Bar(name="5G Install", x=["Private 5G"], y=[p5g_install_cost]))
+totals = pd.DataFrame({
+    "Component": ["TOTAL"],
+    "Wi-Fi ($)": [wifi_capex],
+    "Private 5G ($)": [p5g_capex]
+})
 
-fig_stack.update_layout(barmode='stack', template="plotly_white")
-st.plotly_chart(fig_stack, use_container_width=True)
+capex_df = pd.concat([capex_df, totals], ignore_index=True)
+
+st.dataframe(capex_df, use_container_width=True)
 
 # ============================================================
 # TOTAL CAPEX COMPARISON
