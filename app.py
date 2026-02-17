@@ -3,7 +3,39 @@ import plotly.graph_objects as go
 import math
 
 # ============================================================
-# Vendor Profiles (Simulated Enterprise Pricing)
+# PAGE CONFIG
+# ============================================================
+
+st.set_page_config(layout="wide")
+
+# Custom Styling for Executive Appeal
+st.markdown("""
+<style>
+.main-title {
+    font-size:36px;
+    font-weight:700;
+}
+.section-title {
+    font-size:24px;
+    font-weight:600;
+    margin-top:30px;
+}
+.card {
+    padding:20px;
+    border-radius:10px;
+    background-color:#f5f7fa;
+}
+.highlight {
+    font-size:20px;
+    font-weight:600;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="main-title">🏛 Enterprise Wireless Investment Decision Dashboard</div>', unsafe_allow_html=True)
+
+# ============================================================
+# Vendor Profiles
 # ============================================================
 
 VENDORS = {
@@ -13,7 +45,7 @@ VENDORS = {
 }
 
 # ============================================================
-# Decision Model
+# MODEL
 # ============================================================
 
 class DecisionModel:
@@ -62,13 +94,9 @@ class DecisionModel:
 
 
 # ============================================================
-# UI
+# SIDEBAR
 # ============================================================
 
-st.set_page_config(layout="wide")
-st.title("🏛 Enterprise Wireless Final Decision Engine")
-
-# Sidebar Inputs
 st.sidebar.header("Strategic Inputs")
 
 sqft = st.sidebar.number_input("Facility Size (sqft)", 1000, 10000000, 500000, 10000)
@@ -86,67 +114,60 @@ p5g_capex, p5g_opex, p5g_total = model.p5g()
 hyb_capex, hyb_opex, hyb_total = model.hybrid()
 
 # ============================================================
-# 1️⃣ EXECUTIVE DECISION SUMMARY
+# EXECUTIVE SUMMARY
 # ============================================================
 
-st.header("1️⃣ Executive Investment Summary")
+st.markdown('<div class="section-title">1️⃣ Executive Financial Overview</div>', unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Wi-Fi 5Y TCO", f"${wifi_total:,.0f}")
 col2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 col3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
-annual_wifi = wifi_total/years
-annual_p5g = p5g_total/years
-annual_hyb = hyb_total/years
+cheapest = min(wifi_total, p5g_total, hyb_total)
 
-st.markdown("**Annualized Run-Rate Impact:**")
-st.write(f"Wi-Fi: ${annual_wifi:,.0f} per year")
-st.write(f"Private 5G: ${annual_p5g:,.0f} per year")
-st.write(f"Hybrid: ${annual_hyb:,.0f} per year")
+st.markdown('<div class="section-title">2️⃣ Cost Efficiency Positioning</div>', unsafe_allow_html=True)
+
+if cheapest == wifi_total:
+    delta = (p5g_total - wifi_total)/wifi_total*100
+    st.success(f"Wi-Fi delivers approximately {delta:.1f}% lower total investment compared to Private 5G.")
+elif cheapest == p5g_total:
+    delta = (wifi_total - p5g_total)/p5g_total*100
+    st.success(f"Private 5G delivers approximately {delta:.1f}% lower total investment compared to Wi-Fi.")
+else:
+    st.success("Hybrid architecture provides balanced cost optimization and scalability profile.")
 
 # ============================================================
-# 2️⃣ FINANCIAL STRUCTURE
+# FINANCIAL STRUCTURE
 # ============================================================
 
-st.header("2️⃣ Capital vs Operational Structure")
+st.markdown('<div class="section-title">3️⃣ Capital Structure Analysis</div>', unsafe_allow_html=True)
 
 fig_capex = go.Figure()
 fig_capex.add_trace(go.Bar(name="CAPEX", x=["Wi-Fi","Private 5G","Hybrid"],
                            y=[wifi_capex,p5g_capex,hyb_capex]))
+fig_capex.update_layout(template="plotly_white")
 st.plotly_chart(fig_capex, use_container_width=True)
+
+st.markdown('<div class="section-title">4️⃣ Operational Cost Exposure</div>', unsafe_allow_html=True)
 
 fig_opex = go.Figure()
 fig_opex.add_trace(go.Bar(name="OPEX (5Y)", x=["Wi-Fi","Private 5G","Hybrid"],
                           y=[wifi_opex,p5g_opex,hyb_opex]))
+fig_opex.update_layout(template="plotly_white")
 st.plotly_chart(fig_opex, use_container_width=True)
 
 # ============================================================
-# 3️⃣ STRATEGIC FIT ANALYSIS
+# STRATEGIC TRIGGERS
 # ============================================================
 
-st.header("3️⃣ Strategic Fit Outlook")
+st.markdown('<div class="section-title">5️⃣ Strategic Impact Indicators</div>', unsafe_allow_html=True)
 
 if latency < 10:
-    st.info("Low latency requirement increases strategic advantage of Private 5G.")
+    st.info("Low-latency requirement strengthens Private 5G strategic justification.")
 
 if growth > 15:
-    st.info("High device growth favors scalable architecture (Private 5G or Hybrid).")
+    st.info("High growth trajectory favors scalable architecture (Private 5G or Hybrid).")
 
 if sla == "99.999%":
-    st.info("Ultra-high availability target increases operational complexity and cost.")
-
-# ============================================================
-# 4️⃣ FINAL RECOMMENDATION ENGINE
-# ============================================================
-
-st.header("4️⃣ Decision Recommendation")
-
-cheapest = min(wifi_total, p5g_total, hyb_total)
-
-if cheapest == wifi_total:
-    st.success("Recommendation: Wi-Fi 6E provides lowest financial exposure under current assumptions.")
-elif cheapest == p5g_total:
-    st.success("Recommendation: Private 5G offers better long-term value given scale and SLA requirements.")
-else:
-    st.success("Recommendation: Hybrid architecture balances cost, scalability, and resilience.")
+    st.warning("Ultra-high availability target increases infrastructure resilience requirements and cost exposure.")
