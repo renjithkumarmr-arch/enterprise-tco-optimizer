@@ -119,13 +119,13 @@ p5g_capex = p5g_capex_before_discount * (1 - p5g_discount)
 p5g_opex = p5g_capex * p5g_maint * years
 p5g_total = (p5g_capex + p5g_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
-# ============================================================
+## ============================================================
 # HYBRID
 # ============================================================
 
-hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
-hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
-hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
+#hyb_capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
+#hyb_opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
+#hyb_total = (hyb_capex + hyb_opex) * sla_multiplier(sla) * growth_multiplier(growth, years)
 
 # ============================================================
 # EXECUTIVE OVERVIEW
