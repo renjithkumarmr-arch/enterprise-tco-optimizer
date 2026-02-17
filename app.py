@@ -45,7 +45,7 @@ wifi_controller_cost = st.sidebar.number_input("Controller/Core Cost ($)", min_v
 
 wifi_install_percent = st.sidebar.slider("Installation (%)", 0, 30, 15) / 100
 wifi_maint = st.sidebar.slider("Maintenance (%)", 0, 30, 18) / 100
-wifi_discount = st.sidebar.slider("Wi-Fi Discount (%)", 0, 50, 0) / 100
+wifi_discount = st.sidebar.slider("Wi-Fi Discount (%)", 0, 50, 100) / 100
 
 # ============================================================
 # PRIVATE 5G STACK
@@ -61,7 +61,7 @@ p5g_backhaul_cost = st.sidebar.number_input("Backhaul Cost ($)", min_value=0.0, 
 
 p5g_install_percent = st.sidebar.slider("Installation (%)", 0, 30, 12) / 100
 p5g_maint = st.sidebar.slider("Maintenance (%)", 0, 30, 15) / 100
-p5g_discount = st.sidebar.slider("Private 5G Discount (%)", 0, 50, 0) / 100
+p5g_discount = st.sidebar.slider("Private 5G Discount (%)", 0, 50, 100) / 100
 
 # ============================================================
 # MULTIPLIERS
