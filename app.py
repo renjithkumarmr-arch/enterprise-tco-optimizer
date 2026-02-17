@@ -130,16 +130,6 @@ c2.metric("Private 5G 5Y TCO", f"${p5g_total:,.0f}")
 c3.metric("Hybrid 5Y TCO", f"${hyb_total:,.0f}")
 
 # ============================================================
-# GRAPH CONTROL
-# ============================================================
-
-st.markdown('<div class="section-title">📊 Graph Controls</div>', unsafe_allow_html=True)
-
-show_wifi = st.checkbox("Show Wi-Fi", True)
-show_p5g = st.checkbox("Show Private 5G", True)
-show_hybrid = st.checkbox("Show Hybrid", True)
-
-# ============================================================
 # STACKED CAPEX BREAKDOWN
 # ============================================================
 
@@ -147,18 +137,16 @@ st.markdown('<div class="section-title">2️⃣ CAPEX Composition Breakdown</div
 
 fig_stack = go.Figure()
 
-if show_wifi:
-    fig_stack.add_trace(go.Bar(name="Wi-Fi Access", x=["Wi-Fi"], y=[wifi_access_cost]))
-    fig_stack.add_trace(go.Bar(name="Wi-Fi Switch", x=["Wi-Fi"], y=[wifi_switch_total]))
-    fig_stack.add_trace(go.Bar(name="Wi-Fi Core", x=["Wi-Fi"], y=[wifi_core_total]))
-    fig_stack.add_trace(go.Bar(name="Wi-Fi Install", x=["Wi-Fi"], y=[wifi_install_cost]))
+fig_stack.add_trace(go.Bar(name="Wi-Fi Access", x=["Wi-Fi"], y=[wifi_access_cost]))
+fig_stack.add_trace(go.Bar(name="Wi-Fi Switch", x=["Wi-Fi"], y=[wifi_switch_total]))
+fig_stack.add_trace(go.Bar(name="Wi-Fi Core", x=["Wi-Fi"], y=[wifi_core_total]))
+fig_stack.add_trace(go.Bar(name="Wi-Fi Install", x=["Wi-Fi"], y=[wifi_install_cost]))
 
-if show_p5g:
-    fig_stack.add_trace(go.Bar(name="5G Radio", x=["Private 5G"], y=[p5g_radio_cost]))
-    fig_stack.add_trace(go.Bar(name="5G Core", x=["Private 5G"], y=[p5g_core_total]))
-    fig_stack.add_trace(go.Bar(name="5G Edge", x=["Private 5G"], y=[p5g_edge_total]))
-    fig_stack.add_trace(go.Bar(name="5G Backhaul", x=["Private 5G"], y=[p5g_backhaul_total]))
-    fig_stack.add_trace(go.Bar(name="5G Install", x=["Private 5G"], y=[p5g_install_cost]))
+fig_stack.add_trace(go.Bar(name="5G Radio", x=["Private 5G"], y=[p5g_radio_cost]))
+fig_stack.add_trace(go.Bar(name="5G Core", x=["Private 5G"], y=[p5g_core_total]))
+fig_stack.add_trace(go.Bar(name="5G Edge", x=["Private 5G"], y=[p5g_edge_total]))
+fig_stack.add_trace(go.Bar(name="5G Backhaul", x=["Private 5G"], y=[p5g_backhaul_total]))
+fig_stack.add_trace(go.Bar(name="5G Install", x=["Private 5G"], y=[p5g_install_cost]))
 
 fig_stack.update_layout(barmode='stack', template="plotly_white")
 st.plotly_chart(fig_stack, use_container_width=True)
@@ -171,12 +159,9 @@ st.markdown('<div class="section-title">3️⃣ Total CAPEX Comparison</div>', u
 
 fig_capex = go.Figure()
 
-if show_wifi:
-    fig_capex.add_trace(go.Bar(name="Wi-Fi", x=["CAPEX"], y=[wifi_capex]))
-if show_p5g:
-    fig_capex.add_trace(go.Bar(name="Private 5G", x=["CAPEX"], y=[p5g_capex]))
-if show_hybrid:
-    fig_capex.add_trace(go.Bar(name="Hybrid", x=["CAPEX"], y=[hyb_capex]))
+fig_capex.add_trace(go.Bar(name="Wi-Fi", x=["CAPEX"], y=[wifi_capex]))
+fig_capex.add_trace(go.Bar(name="Private 5G", x=["CAPEX"], y=[p5g_capex]))
+fig_capex.add_trace(go.Bar(name="Hybrid", x=["CAPEX"], y=[hyb_capex]))
 
 fig_capex.update_layout(barmode="group", template="plotly_white")
 st.plotly_chart(fig_capex, use_container_width=True)
@@ -189,22 +174,20 @@ st.markdown('<div class="section-title">4️⃣ Investment Trend (Cumulative)</d
 
 years_list = list(range(1, years+1))
 
+wifi_trend = [wifi_capex + wifi_capex*wifi_maint*y for y in years_list]
+p5g_trend = [p5g_capex + p5g_capex*p5g_maint*y for y in years_list]
+hyb_trend = [hyb_capex + hyb_capex*wifi_maint*y for y in years_list]
+
 fig_trend = go.Figure()
 
-if show_wifi:
-    wifi_trend = [wifi_capex + wifi_capex*wifi_maint*y for y in years_list]
-    fig_trend.add_trace(go.Scatter(x=years_list, y=wifi_trend,
-                                   mode='lines+markers', name='Wi-Fi'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=wifi_trend,
+                               mode='lines+markers', name='Wi-Fi'))
 
-if show_p5g:
-    p5g_trend = [p5g_capex + p5g_capex*p5g_maint*y for y in years_list]
-    fig_trend.add_trace(go.Scatter(x=years_list, y=p5g_trend,
-                                   mode='lines+markers', name='Private 5G'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=p5g_trend,
+                               mode='lines+markers', name='Private 5G'))
 
-if show_hybrid:
-    hyb_trend = [hyb_capex + hyb_capex*wifi_maint*y for y in years_list]
-    fig_trend.add_trace(go.Scatter(x=years_list, y=hyb_trend,
-                                   mode='lines+markers', name='Hybrid'))
+fig_trend.add_trace(go.Scatter(x=years_list, y=hyb_trend,
+                               mode='lines+markers', name='Hybrid'))
 
 fig_trend.update_layout(template="plotly_white")
 st.plotly_chart(fig_trend, use_container_width=True)
