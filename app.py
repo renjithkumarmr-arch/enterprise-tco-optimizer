@@ -1,8 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-import numpy as np
 import math
-import random
 
 # ============================================================
 # Vendor Pricing Simulation
@@ -37,133 +35,144 @@ VENDOR_PRICING = {
 # ============================================================
 
 class WirelessTCOModel:
-    def __init__(self, sqft, years, vendor):
+    def __init__(self, sqft, years, vendor, growth_rate, latency, sla, coverage):
         self.sqft = sqft
         self.years = years
         self.vendor = VENDOR_PRICING[vendor]
+        self.growth_rate = growth_rate
+        self.latency = latency
+        self.sla = sla
+        self.coverage = coverage
 
-    def wifi_ap_count(self):
-        return math.ceil(self.sqft / 2500)
+    def sla_multiplier(self):
+        return {"99.9%":1.0, "99.99%":1.08, "99.999%":1.15}[self.sla]
 
-    def p5g_cell_count(self):
-        return math.ceil(self.sqft / 10000)
+    def growth_multiplier(self):
+        return (1 + self.growth_rate/100) ** self.years
 
-    def calculate_wifi(self):
-        ap_count = self.wifi_ap_count()
-        capex = ap_count * self.vendor["wifi_ap_cost"]
+    def wifi(self):
+        ap = math.ceil(self.sqft / 2500)
+        if self.coverage == "Indoor + Outdoor":
+            ap *= 1.2
+        capex = ap * self.vendor["wifi_ap_cost"]
         opex = capex * self.vendor["maintenance_wifi"] * self.years
-        return capex, opex
+        total = (capex + opex) * self.sla_multiplier() * self.growth_multiplier()
+        if self.latency < 10:
+            total *= 1.10
+        return capex, opex, total
 
-    def calculate_p5g(self):
-        cell_count = self.p5g_cell_count()
-        capex = cell_count * self.vendor["p5g_small_cell_cost"] + self.vendor["core_cost"]
+    def p5g(self):
+        cells = math.ceil(self.sqft / 10000)
+        if self.coverage == "Indoor + Outdoor":
+            cells *= 1.15
+        capex = cells * self.vendor["p5g_small_cell_cost"] + self.vendor["core_cost"]
         opex = capex * self.vendor["maintenance_p5g"] * self.years
-        return capex, opex
+        total = (capex + opex) * self.sla_multiplier() * self.growth_multiplier()
+        return capex, opex, total
 
-    def calculate_hybrid(self):
-        wifi_capex, wifi_opex = self.calculate_wifi()
-        p5g_capex, p5g_opex = self.calculate_p5g()
+    def hybrid(self):
+        wifi_capex, wifi_opex, _ = self.wifi()
+        p5g_capex, p5g_opex, _ = self.p5g()
 
         capex = (wifi_capex * 0.6) + (p5g_capex * 0.6)
         opex = (wifi_opex * 0.6) + (p5g_opex * 0.6)
-        return capex, opex
+        total = (capex + opex) * self.sla_multiplier() * self.growth_multiplier()
+        return capex, opex, total
 
 
 # ============================================================
-# Streamlit UI
+# UI
 # ============================================================
 
-st.set_page_config(page_title="Enterprise Wireless TCO Optimizer", layout="wide")
+st.set_page_config(page_title="Enterprise Wireless Economic Engine", layout="wide")
 st.title("🌐 Enterprise Wireless Economic Engine")
 
+# Sidebar
 st.sidebar.header("🏢 Facility Parameters")
 
 sqft = st.sidebar.number_input("Facility Size (sqft)", 1000, 10000000, 500000, 10000)
 years = st.sidebar.slider("Analysis Horizon (Years)", 1, 10, 5)
-vendor = st.sidebar.selectbox("Select Vendor", ["Cisco", "Nokia", "Ericsson"])
-architecture = st.sidebar.selectbox("Architecture", ["Wi-Fi 6E", "Private 5G", "Hybrid"])
+vendor = st.sidebar.selectbox("Vendor", ["Cisco", "Nokia", "Ericsson"])
+growth_rate = st.sidebar.slider("Annual Device Growth (%)", 0, 30, 8)
+latency = st.sidebar.slider("Latency Requirement (ms)", 1, 50, 15)
+sla = st.sidebar.selectbox("Availability Target", ["99.9%", "99.99%", "99.999%"])
+coverage = st.sidebar.selectbox("Coverage Type", ["Indoor Only", "Indoor + Outdoor"])
 
-model = WirelessTCOModel(sqft, years, vendor)
+model = WirelessTCOModel(sqft, years, vendor, growth_rate, latency, sla, coverage)
 
-# ============================================================
-# Calculate Costs
-# ============================================================
-
-wifi_capex, wifi_opex = model.calculate_wifi()
-p5g_capex, p5g_opex = model.calculate_p5g()
-hyb_capex, hyb_opex = model.calculate_hybrid()
-
-wifi_total = wifi_capex + wifi_opex
-p5g_total = p5g_capex + p5g_opex
-hyb_total = hyb_capex + hyb_opex
+wifi_capex, wifi_opex, wifi_total = model.wifi()
+p5g_capex, p5g_opex, p5g_total = model.p5g()
+hyb_capex, hyb_opex, hyb_total = model.hybrid()
 
 # ============================================================
-# KPI Section
+# Executive Summary
 # ============================================================
+
+st.header("📊 Executive Summary")
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Wi-Fi 6E TCO", f"${wifi_total:,.0f}")
 col2.metric("Private 5G TCO", f"${p5g_total:,.0f}")
 col3.metric("Hybrid TCO", f"${hyb_total:,.0f}")
 
-# ============================================================
-# CAPEX vs OPEX Chart
-# ============================================================
-
-st.subheader("💰 CAPEX vs OPEX Breakdown")
-
-fig1 = go.Figure()
-fig1.add_trace(go.Bar(name="Wi-Fi CAPEX", x=["Wi-Fi"], y=[wifi_capex]))
-fig1.add_trace(go.Bar(name="Wi-Fi OPEX", x=["Wi-Fi"], y=[wifi_opex]))
-fig1.add_trace(go.Bar(name="5G CAPEX", x=["Private 5G"], y=[p5g_capex]))
-fig1.add_trace(go.Bar(name="5G OPEX", x=["Private 5G"], y=[p5g_opex]))
-fig1.add_trace(go.Bar(name="Hybrid CAPEX", x=["Hybrid"], y=[hyb_capex]))
-fig1.add_trace(go.Bar(name="Hybrid OPEX", x=["Hybrid"], y=[hyb_opex]))
-
-fig1.update_layout(barmode="stack", template="plotly_white")
-st.plotly_chart(fig1, use_container_width=True)
-
-# ============================================================
-# Radar Chart (Qualitative Comparison)
-# ============================================================
-
-st.subheader("📊 Qualitative Comparison")
-
-categories = ["Scalability", "Security", "Latency", "Mobility", "Cost Efficiency"]
-
-wifi_scores = [6, 7, 6, 5, 8]
-p5g_scores = [9, 9, 9, 9, 6]
-hyb_scores = [8, 8, 8, 8, 7]
-
-fig2 = go.Figure()
-
-fig2.add_trace(go.Scatterpolar(r=wifi_scores, theta=categories, fill='toself', name='Wi-Fi'))
-fig2.add_trace(go.Scatterpolar(r=p5g_scores, theta=categories, fill='toself', name='Private 5G'))
-fig2.add_trace(go.Scatterpolar(r=hyb_scores, theta=categories, fill='toself', name='Hybrid'))
-
-fig2.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,10])), showlegend=True)
-st.plotly_chart(fig2, use_container_width=True)
-
-# ============================================================
-# Monte Carlo Risk Simulation
-# ============================================================
-
-st.subheader("🎲 Monte Carlo Risk Simulation (Cost Variability)")
-
-simulations = 1000
-wifi_sim = []
-p5g_sim = []
-
-for _ in range(simulations):
-    wifi_sim.append(wifi_total * random.uniform(0.9, 1.15))
-    p5g_sim.append(p5g_total * random.uniform(0.9, 1.15))
-
-fig3 = go.Figure()
-fig3.add_trace(go.Histogram(x=wifi_sim, name="Wi-Fi", opacity=0.6))
-fig3.add_trace(go.Histogram(x=p5g_sim, name="Private 5G", opacity=0.6))
-
-fig3.update_layout(barmode="overlay", template="plotly_white")
-st.plotly_chart(fig3, use_container_width=True)
+cheapest = min(wifi_total, p5g_total, hyb_total)
 
 st.markdown("---")
-st.caption("Simulated enterprise financial model for strategic comparison purposes.")
+st.subheader("📌 Cost Insight")
+
+if cheapest == wifi_total:
+    delta = (p5g_total - wifi_total) / wifi_total * 100
+    st.success(f"Wi-Fi is approximately {delta:.1f}% more cost-efficient than Private 5G.")
+elif cheapest == p5g_total:
+    delta = (wifi_total - p5g_total) / p5g_total * 100
+    st.success(f"Private 5G is approximately {delta:.1f}% more cost-efficient than Wi-Fi.")
+else:
+    st.success("Hybrid provides balanced investment profile under current assumptions.")
+
+# ============================================================
+# Wi-Fi Section
+# ============================================================
+
+st.header("📡 Wi-Fi 6E Financials")
+st.write(f"CAPEX: ${wifi_capex:,.0f}")
+st.write(f"OPEX: ${wifi_opex:,.0f}")
+
+# ============================================================
+# Private 5G Section
+# ============================================================
+
+st.header("📶 Private 5G Financials")
+st.write(f"CAPEX: ${p5g_capex:,.0f}")
+st.write(f"OPEX: ${p5g_opex:,.0f}")
+
+# ============================================================
+# Hybrid Section
+# ============================================================
+
+st.header("🔀 Hybrid Architecture Financials")
+st.write(f"CAPEX: ${hyb_capex:,.0f}")
+st.write(f"OPEX: ${hyb_opex:,.0f}")
+
+# ============================================================
+# CAPEX Chart
+# ============================================================
+
+st.header("💰 CAPEX Comparison")
+
+fig_capex = go.Figure()
+fig_capex.add_trace(go.Bar(name="CAPEX", x=["Wi-Fi", "Private 5G", "Hybrid"],
+                           y=[wifi_capex, p5g_capex, hyb_capex]))
+fig_capex.update_layout(template="plotly_white")
+st.plotly_chart(fig_capex, use_container_width=True)
+
+# ============================================================
+# OPEX Chart
+# ============================================================
+
+st.header("📉 OPEX Comparison")
+
+fig_opex = go.Figure()
+fig_opex.add_trace(go.Bar(name="OPEX", x=["Wi-Fi", "Private 5G", "Hybrid"],
+                          y=[wifi_opex, p5g_opex, hyb_opex]))
+fig_opex.update_layout(template="plotly_white")
+st.plotly_chart(fig_opex, use_container_width=True)
